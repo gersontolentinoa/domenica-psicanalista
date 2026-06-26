@@ -110,6 +110,17 @@ export async function getUser(context) {
   return verifySessionToken(env.SESSION_SECRET, token);
 }
 
+// Defesa anti-CSRF complementar ao SameSite: confere o header Origin.
+export function sameOrigin(request) {
+  const origin = request.headers.get('Origin');
+  if (!origin) return true; // navegação same-origin / sem Origin: cookie+SameSite cobre
+  try {
+    return new URL(origin).host === request.headers.get('Host');
+  } catch {
+    return false;
+  }
+}
+
 // Helper para handlers que exigem autenticação.
 export async function requireUser(context) {
   const user = await getUser(context);

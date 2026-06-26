@@ -147,13 +147,234 @@ function renderConteudo(main) {
     </div></div>
     <div class="card"><div class="placeholder"><span class="badge-soon">Em breve</span> O editor de conteúdo entra na próxima atualização.</div></div>`;
 }
-function renderBlog(main) {
+// ── Blog: lista de artigos ─────────────────────────────────
+async function renderBlog(main) {
   main.innerHTML = `
-    <div class="page-head"><div>
-      <h1>Blog</h1>
-      <p>Escreva, edite e publique artigos. Cada artigo ganha uma página própria no site.</p>
-    </div></div>
-    <div class="card"><div class="placeholder"><span class="badge-soon">Em breve</span> O editor de artigos entra na próxima atualização.</div></div>`;
+    <div class="page-head">
+      <div><h1>Blog</h1><p>Escreva, edite e publique artigos. Cada um ganha uma página própria no site.</p></div>
+      <button class="btn btn-pri" id="new">+ Novo artigo</button>
+    </div>
+    <div id="list" class="art-list"><div class="placeholder">Carregando…</div></div>`;
+  main.querySelector('#new').addEventListener('click', () => viewArticleEditor(main, null));
+  const list = main.querySelector('#list');
+  let data;
+  try { data = await api('/articles?all=1'); } catch (e) { list.innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`; return; }
+  if (!data.articles.length) {
+    list.innerHTML = `<div class="card placeholder">Nenhum artigo ainda. Clique em <strong>+ Novo artigo</strong> para começar.</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  data.articles.forEach((a) => {
+    const item = el(`
+      <div class="art-item">
+        ${a.cover_image ? `<img class="thumb" src="${esc(a.cover_image)}" alt=""/>` : `<div class="thumb"></div>`}
+        <div class="info">
+          <h4>${esc(a.title)}</h4>
+          <div class="sub">${a.status === 'published' ? '<span class="pill pill-pub">Publicado</span>' : '<span class="pill pill-draft">Rascunho</span>'} · ${esc(a.category || 'Artigo')}${a.status === 'published' ? ' · /blog/' + esc(a.slug) : ''}</div>
+        </div>
+        <div class="acts">
+          ${a.status === 'published' ? `<a class="btn btn-ghost btn-sm" href="/blog/${esc(a.slug)}" target="_blank">Ver</a>` : ''}
+          <button class="btn btn-ghost btn-sm edit">Editar</button>
+          <button class="btn btn-danger btn-sm del">Excluir</button>
+        </div>
+      </div>`);
+    item.querySelector('.edit').addEventListener('click', () => viewArticleEditor(main, a.id));
+    item.querySelector('.del').addEventListener('click', async () => {
+      if (!confirm(`Excluir "${a.title}"? Esta ação não pode ser desfeita.`)) return;
+      try { await api('/articles/' + a.id, { method: 'DELETE' }); toast('Artigo excluído.'); renderBlog(main); }
+      catch (e) { toast(e.message, true); }
+    });
+    list.appendChild(item);
+  });
+}
+
+// ── Blog: editor de artigo ─────────────────────────────────
+async function viewArticleEditor(main, id) {
+  let art = { title: '', excerpt: '', category: '', cover_image: '', body_html: '', status: 'draft' };
+  if (id) {
+    try { art = (await api('/articles/' + id)).article; } catch (e) { toast(e.message, true); return; }
+  }
+  const cover = { url: art.cover_image || '' };
+
+  main.innerHTML = `
+    <div class="page-head">
+      <div><h1>${id ? 'Editar artigo' : 'Novo artigo'}</h1></div>
+      <button class="btn btn-ghost" id="back">← Voltar</button>
+    </div>
+    <div id="msg"></div>
+    <div class="field"><label>Título</label><input id="title" maxlength="160" placeholder="Título do artigo"/><div class="counter" id="cTitle"></div></div>
+    <div class="editor-grid">
+      <div>
+        <div class="toolbar" id="tb">
+          <button data-cmd="bold" title="Negrito"><b>B</b></button>
+          <button data-cmd="italic" title="Itálico"><i>I</i></button>
+          <span class="sep"></span>
+          <button data-block="h2" title="Título">H2</button>
+          <button data-block="h3" title="Subtítulo">H3</button>
+          <button data-block="p" title="Parágrafo">¶</button>
+          <span class="sep"></span>
+          <button data-list="insertUnorderedList" title="Lista">• Lista</button>
+          <button data-list="insertOrderedList" title="Lista numerada">1. Lista</button>
+          <button data-block="blockquote" title="Citação">❝ Citação</button>
+          <span class="sep"></span>
+          <button data-link title="Link">🔗 Link</button>
+          <button data-img title="Imagem">🖼 Imagem</button>
+          <button data-clear title="Limpar formatação">⌫ Limpar</button>
+        </div>
+        <div class="rte" id="rte" contenteditable="true" data-ph="Escreva o artigo aqui…"></div>
+      </div>
+      <div>
+        <div class="aside-card">
+          <div class="field" style="margin-bottom:8px"><label>Imagem de capa</label>
+            <img class="cover-prev" id="coverPrev" alt="" style="${cover.url ? '' : 'display:none'}" src="${esc(cover.url)}"/>
+            <div class="sticky-actions">
+              <button class="btn btn-ghost btn-sm" id="coverBtn">Enviar capa</button>
+              <button class="btn btn-danger btn-sm" id="coverDel" style="${cover.url ? '' : 'display:none'}">Remover</button>
+            </div>
+          </div>
+        </div>
+        <div class="aside-card">
+          <div class="field"><label>Categoria</label><input id="category" maxlength="40" placeholder="ex: Ansiedade"/></div>
+          <div class="field"><label>Resumo (aparece na listagem)</label><textarea id="excerpt" rows="3" maxlength="300" placeholder="Frase curta que convida à leitura"></textarea><div class="counter" id="cExcerpt"></div></div>
+        </div>
+        <div class="aside-card">
+          <div class="sticky-actions">
+            <button class="btn btn-pri" id="save">Salvar rascunho</button>
+            <button class="btn btn-ghost" id="pub"></button>
+          </div>
+          <div class="hint" id="statusHint" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" hidden/>`;
+
+  const rte = main.querySelector('#rte');
+  const titleI = main.querySelector('#title');
+  const catI = main.querySelector('#category');
+  const excI = main.querySelector('#excerpt');
+  const fileInput = main.querySelector('#fileInput');
+  const coverPrev = main.querySelector('#coverPrev');
+  const coverDel = main.querySelector('#coverDel');
+  const pubBtn = main.querySelector('#pub');
+  const statusHint = main.querySelector('#statusHint');
+
+  titleI.value = art.title || '';
+  catI.value = art.category || '';
+  excI.value = art.excerpt || '';
+  rte.innerHTML = art.body_html || '';
+
+  try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch {}
+
+  // contadores
+  const counter = (input, out, max) => {
+    const upd = () => { out.textContent = `${input.value.length}/${max}`; out.classList.toggle('over', input.value.length > max); };
+    input.addEventListener('input', upd); upd();
+  };
+  counter(titleI, main.querySelector('#cTitle'), 160);
+  counter(excI, main.querySelector('#cExcerpt'), 300);
+
+  // colar como texto simples
+  rte.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  });
+
+  // toolbar
+  main.querySelector('#tb').addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    e.preventDefault(); rte.focus();
+    if (b.dataset.cmd) document.execCommand(b.dataset.cmd);
+    else if (b.dataset.block) document.execCommand('formatBlock', false, b.dataset.block);
+    else if (b.dataset.list) document.execCommand(b.dataset.list);
+    else if (b.hasAttribute('data-clear')) { document.execCommand('removeFormat'); document.execCommand('formatBlock', false, 'p'); }
+    else if (b.hasAttribute('data-link')) {
+      const url = prompt('Endereço do link (https://…):'); if (url) document.execCommand('createLink', false, url);
+    } else if (b.hasAttribute('data-img')) {
+      fileInput.dataset.target = 'inline'; fileInput.click();
+    }
+  });
+
+  // upload (capa ou inline)
+  main.querySelector('#coverBtn').addEventListener('click', () => { fileInput.dataset.target = 'cover'; fileInput.click(); });
+  coverDel.addEventListener('click', () => { cover.url = ''; coverPrev.style.display = 'none'; coverDel.style.display = 'none'; });
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0]; if (!file) return;
+    const target = fileInput.dataset.target;
+    fileInput.value = '';
+    toast('Enviando imagem…');
+    try {
+      const url = await uploadImage(file);
+      if (target === 'cover') { cover.url = url; coverPrev.src = url; coverPrev.style.display = 'block'; coverDel.style.display = ''; }
+      else { rte.focus(); document.execCommand('insertHTML', false, `<img src="${url}" alt=""/><p></p>`); }
+      toast('Imagem adicionada.');
+    } catch (e) { toast(e.message, true); }
+  });
+
+  // estado de publicação
+  let status = art.status || 'draft';
+  function refreshStatusUI() {
+    pubBtn.textContent = status === 'published' ? 'Despublicar' : 'Publicar';
+    pubBtn.className = 'btn ' + (status === 'published' ? 'btn-danger' : 'btn-ghost');
+    statusHint.textContent = status === 'published' ? 'Este artigo está visível no site.' : 'Rascunho — só você vê.';
+    main.querySelector('#save').textContent = status === 'published' ? 'Salvar alterações' : 'Salvar rascunho';
+  }
+  refreshStatusUI();
+
+  async function save(newStatus) {
+    const payload = {
+      title: titleI.value, category: catI.value, excerpt: excI.value,
+      cover_image: cover.url, body_html: rte.innerHTML, status: newStatus,
+    };
+    const msg = main.querySelector('#msg'); msg.innerHTML = '';
+    try {
+      const res = id
+        ? await api('/articles/' + id, { method: 'PUT', body: payload })
+        : await api('/articles', { method: 'POST', body: payload });
+      id = res.id; status = newStatus; refreshStatusUI();
+      toast(newStatus === 'published' ? 'Publicado!' : 'Salvo.');
+    } catch (e) { msg.innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`; toast(e.message, true); }
+  }
+  main.querySelector('#save').addEventListener('click', () => save(status));
+  pubBtn.addEventListener('click', () => save(status === 'published' ? 'draft' : 'published'));
+  main.querySelector('#back').addEventListener('click', () => renderBlog(main));
+}
+
+// ── Helpers de imagem e toast ──────────────────────────────
+function downscaleImage(file, maxW = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    if (file.type === 'image/gif') { resolve(file); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      if (img.width <= maxW) { resolve(file); return; }
+      const scale = maxW / img.width;
+      const c = document.createElement('canvas');
+      c.width = maxW; c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob((b) => resolve(b ? new File([b], 'img.jpg', { type: 'image/jpeg' }) : file), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida.')); };
+    img.src = url;
+  });
+}
+async function uploadImage(file) {
+  const small = await downscaleImage(file);
+  const fd = new FormData(); fd.append('file', small);
+  const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'same-origin' });
+  let data = null; try { data = await res.json(); } catch {}
+  if (!res.ok) throw new Error((data && data.error) || 'Falha no upload da imagem.');
+  return data.url;
+}
+let toastTimer = null;
+function toast(msg, isErr = false) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.className = 'toast' + (isErr ? ' err' : '');
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
 boot();
