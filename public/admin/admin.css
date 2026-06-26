@@ -96,6 +96,14 @@ a{color:var(--steel)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:560px){.row2{grid-template-columns:1fr}}
 
+/* ── Editor de conteúdo ────────────────────────────── */
+.group-title{font-family:"Cormorant Garamond",serif;font-size:1.45rem;font-weight:600;margin-bottom:2px}
+.group-desc{font-size:.84rem;color:var(--ink-soft);margin-bottom:14px}
+.group-fields{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+.group-fields .field.full{grid-column:1/-1}
+@media(max-width:680px){.group-fields{grid-template-columns:1fr}}
+.page-head .sticky-actions{align-items:center}
+
 @media(max-width:820px){
   .dash{grid-template-columns:1fr}
   .side{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px;padding:12px}

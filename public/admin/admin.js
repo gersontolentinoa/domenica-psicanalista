@@ -139,13 +139,51 @@ function viewDashboard(active = 'conteudo') {
 }
 
 // Placeholders (preenchidos nas próximas fases)
-function renderConteudo(main) {
+async function renderConteudo(main) {
   main.innerHTML = `
-    <div class="page-head"><div>
-      <h1>Conteúdo da página</h1>
-      <p>Edite os textos de cada seção da landing page, os contatos e os números. A estrutura do design fica protegida — você só troca o conteúdo.</p>
-    </div></div>
-    <div class="card"><div class="placeholder"><span class="badge-soon">Em breve</span> O editor de conteúdo entra na próxima atualização.</div></div>`;
+    <div class="page-head">
+      <div><h1>Conteúdo da página</h1><p>Edite os textos de cada seção. A estrutura do design fica protegida — você só troca o conteúdo.</p></div>
+      <div class="sticky-actions"><a class="btn btn-ghost btn-sm" href="/" target="_blank">Ver site ↗</a><button class="btn btn-pri" id="save">Salvar alterações</button></div>
+    </div>
+    <div id="msg"></div>
+    <div id="groups"><div class="placeholder">Carregando conteúdo…</div></div>`;
+
+  let data;
+  try { data = await api('/content'); }
+  catch (e) { main.querySelector('#groups').innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`; return; }
+
+  const wrap = main.querySelector('#groups');
+  wrap.innerHTML = '';
+  const inputs = {};
+
+  data.groups.forEach((g) => {
+    const card = el(`<div class="card"><h3 class="group-title">${esc(g.label)}</h3>${g.desc ? `<p class="group-desc">${esc(g.desc)}</p>` : ''}<div class="group-fields"></div></div>`);
+    const gf = card.querySelector('.group-fields');
+    g.fields.forEach((f) => {
+      const isArea = f.type === 'textarea';
+      const field = el(`<div class="field ${isArea ? 'full' : ''}"><label>${esc(f.label)}</label>${
+        isArea ? `<textarea rows="3" maxlength="${f.max || 500}"></textarea>` : `<input type="text" maxlength="${f.max || 120}"/>`
+      }<div class="counter"></div></div>`);
+      const inp = field.querySelector('textarea, input');
+      inp.value = data.values[f.k] != null ? data.values[f.k] : '';
+      const cnt = field.querySelector('.counter');
+      const upd = () => { cnt.textContent = `${inp.value.length}/${f.max}`; cnt.classList.toggle('over', inp.value.length > f.max); };
+      inp.addEventListener('input', upd); upd();
+      inputs[f.k] = inp;
+      gf.appendChild(field);
+    });
+    wrap.appendChild(card);
+  });
+
+  main.querySelector('#save').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const values = {};
+    Object.entries(inputs).forEach(([k, inp]) => { values[k] = inp.value; });
+    try { await api('/content', { method: 'PUT', body: { values } }); toast('Conteúdo salvo! As mudanças já estão no site.'); }
+    catch (err) { toast(err.message, true); main.querySelector('#msg').innerHTML = `<div class="msg msg-err">${esc(err.message)}</div>`; }
+    btn.disabled = false;
+  });
 }
 // ── Blog: lista de artigos ─────────────────────────────────
 async function renderBlog(main) {
