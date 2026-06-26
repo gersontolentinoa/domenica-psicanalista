@@ -1,0 +1,12 @@
+name = "domenica-psicanalista"
+compatibility_date = "2026-01-01"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "domenica-db"
+database_id = "6d9939bb-303d-436f-9b84-e0665fbc66ef"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "domenica-uploads"
