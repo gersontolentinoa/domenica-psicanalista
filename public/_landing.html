@@ -175,6 +175,19 @@
   .dep .pill{position:absolute;top:18px;right:18px;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);background:var(--sand);padding:.25rem .6rem;border-radius:999px}
   .dep p{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:1.35rem;line-height:1.3}
   .dep cite{display:block;margin-top:18px;font-style:normal;font-size:.85rem;color:var(--ink-soft)}
+  /* carrossel de depoimentos */
+  .dep-carousel{margin-top:48px;position:relative}
+  .dep-track{display:flex;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none}
+  .dep-track::-webkit-scrollbar{display:none}
+  .dep-slide{scroll-snap-align:center;flex:0 0 100%;min-width:0;background:var(--paper-2);border:1px solid var(--sand);border-radius:var(--r);padding:clamp(36px,5vw,60px) clamp(26px,5vw,64px);text-align:center}
+  .dep-slide p{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:clamp(1.5rem,3vw,2.1rem);line-height:1.32;max-width:32ch;margin:0 auto;color:var(--ink)}
+  .dep-slide cite{display:block;margin-top:22px;font-style:normal;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--steel)}
+  .dep-controls{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:28px}
+  .dep-arrow{width:42px;height:42px;border-radius:50%;border:1px solid var(--sand);background:var(--paper);color:var(--ink);font-size:1.4rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+  .dep-arrow:hover{border-color:var(--steel);background:var(--paper-2);transform:translateY(-1px)}
+  .dep-dots{display:flex;gap:9px}
+  .dep-dot{width:8px;height:8px;border-radius:50%;border:none;background:var(--sand);cursor:pointer;padding:0;transition:.2s}
+  .dep-dot.active{background:var(--steel);transform:scale(1.35)}
 
   /* blog */
   .blog{background:var(--ink-deep);color:var(--paper)}
@@ -295,7 +308,7 @@
     <a href="#sobre">Sobre</a>
     <a href="#atendimentos">Atendimentos</a>
     <a href="#processo">Processo</a>
-    <a href="#blog">Blog</a>
+    <a href="#blog" data-navlink="blog">Blog</a>
     <a href="#contato">Contato</a>
     <a class="btn btn-pri" data-k-wa href="https://wa.me/5535991468209?text=Ol%C3%A1%2C%20Dom%C3%AAnica!%20Vim%20pelo%20site%20e%20gostaria%20de%20agendar%20uma%20conversa." target="_blank" rel="noopener">Agendar conversa</a>
   </div>
@@ -428,18 +441,21 @@
   </div>
 </section>
 
-<section class="block" id="depoimentos">
+<section class="block" id="depoimentos" data-section="depoimentos">
   <div class="wrap">
     <div class="head reveal"><span class="eyebrow" data-k="dep.eyebrow">Quem caminhou junto</span><h2 data-k="dep.h2">Histórias que a escuta ajudou a reescrever.</h2></div>
-    <div class="deps">
-      <!-- SUBSTITUIR por depoimentos reais e autorizados (LGPD + sigilo). -->
-      <figure class="dep reveal"><span class="pill">exemplo</span><p data-k="dep.dep1Text">“Cheguei sem saber nomear o que sentia. Hoje entendo o que me move — e isso mudou tudo.”</p><cite data-k="dep.dep1Cite">— Paciente · atendimento online</cite></figure>
-      <figure class="dep reveal"><span class="pill">exemplo</span><p data-k="dep.dep2Text">“Pela primeira vez, senti que havia espaço para mim mesma. Foi onde recomecei.”</p><cite data-k="dep.dep2Cite">— Paciente · consultório em Itajubá</cite></figure>
+    <div class="dep-carousel reveal">
+      <div class="dep-track" data-testimonials></div>
+      <div class="dep-controls">
+        <button class="dep-arrow dep-prev" type="button" aria-label="Depoimento anterior">‹</button>
+        <div class="dep-dots"></div>
+        <button class="dep-arrow dep-next" type="button" aria-label="Próximo depoimento">›</button>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="block blog" id="blog">
+<section class="block blog" id="blog" data-section="blog">
   <div class="wrap">
     <div class="head reveal"><span class="eyebrow" data-k="blog.eyebrow">Blog</span><h2 data-k="blog.h2">Reflexões sobre escuta, mente e vida.</h2><p data-k="blog.intro">Conteúdos para acompanhar quem se interessa por psicanálise e saúde emocional.</p></div>
     <div class="posts" data-articles>
@@ -523,6 +539,20 @@
   document.querySelectorAll('[data-count]').forEach(el=>cio.observe(el));
   document.querySelectorAll('.faq-q').forEach(q=>{q.addEventListener('click',()=>{const item=q.parentElement,a=item.querySelector('.faq-a'),open=item.classList.contains('open');document.querySelectorAll('.faq-item.open').forEach(o=>{o.classList.remove('open');o.querySelector('.faq-a').style.maxHeight=null;});if(!open){item.classList.add('open');a.style.maxHeight=a.scrollHeight+'px';}});});
   document.getElementById('year').textContent=new Date().getFullYear();
+  document.querySelectorAll('.dep-carousel').forEach(car=>{
+    const track=car.querySelector('.dep-track'),slides=[...track.children],ctrls=car.querySelector('.dep-controls'),dotsC=car.querySelector('.dep-dots');
+    if(slides.length<=1){if(ctrls)ctrls.style.display='none';return;}
+    let idx=0;const sw=()=>slides[0].getBoundingClientRect().width+22;
+    const upd=()=>[...dotsC.children].forEach((d,i)=>d.classList.toggle('active',i===idx));
+    const go=i=>{idx=(i+slides.length)%slides.length;track.scrollTo({left:idx*sw(),behavior:'smooth'});upd();};
+    slides.forEach((_,i)=>{const d=document.createElement('button');d.type='button';d.className='dep-dot'+(i===0?' active':'');d.setAttribute('aria-label','Depoimento '+(i+1));d.addEventListener('click',()=>go(i));dotsC.appendChild(d);});
+    car.querySelector('.dep-prev').addEventListener('click',()=>go(idx-1));
+    car.querySelector('.dep-next').addEventListener('click',()=>go(idx+1));
+    let st;track.addEventListener('scroll',()=>{clearTimeout(st);st=setTimeout(()=>{idx=Math.max(0,Math.min(slides.length-1,Math.round(track.scrollLeft/sw())));upd();},90);},{passive:true});
+    let timer=setInterval(()=>go(idx+1),6500);
+    car.addEventListener('mouseenter',()=>clearInterval(timer));
+    car.addEventListener('mouseleave',()=>{clearInterval(timer);timer=setInterval(()=>go(idx+1),6500);});
+  });
 </script>
 </body>
 </html>

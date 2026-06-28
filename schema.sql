@@ -35,6 +35,18 @@ CREATE TABLE IF NOT EXISTS articles (
 );
 CREATE INDEX IF NOT EXISTS idx_articles_pub ON articles(status, published_at DESC);
 
+-- Depoimentos (carrossel da landing, gerenciados pelo painel)
+CREATE TABLE IF NOT EXISTS testimonials (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  text       TEXT NOT NULL,
+  author     TEXT,
+  status     TEXT NOT NULL DEFAULT 'draft',   -- draft | published
+  position   INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_testimonials_pub ON testimonials(status, position, id);
+
 -- Tentativas de login (rate limiting simples por IP)
 CREATE TABLE IF NOT EXISTS login_attempts (
   ip TEXT NOT NULL,

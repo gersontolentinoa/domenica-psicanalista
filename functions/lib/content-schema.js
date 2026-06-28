@@ -94,13 +94,9 @@ export const GROUPS = [
     { k: 'proc.step4Title', label: 'Etapa 4 — título', type: 'text', max: 40 },
     { k: 'proc.step4Desc', label: 'Etapa 4 — texto', type: 'textarea', max: 220 },
   ]},
-  { id: 'dep', label: 'Depoimentos', fields: [
+  { id: 'dep', label: 'Depoimentos (cabeçalho)', desc: 'Os depoimentos em si são gerenciados na aba “Depoimentos”. A seção só aparece no site quando houver depoimentos publicados.', fields: [
     { k: 'dep.eyebrow', label: 'Etiqueta', type: 'text', max: 40 },
     { k: 'dep.h2', label: 'Título', type: 'text', max: 80 },
-    { k: 'dep.dep1Text', label: 'Depoimento 1', type: 'textarea', max: 280 },
-    { k: 'dep.dep1Cite', label: 'Depoimento 1 — autoria', type: 'text', max: 60 },
-    { k: 'dep.dep2Text', label: 'Depoimento 2', type: 'textarea', max: 280 },
-    { k: 'dep.dep2Cite', label: 'Depoimento 2 — autoria', type: 'text', max: 60 },
   ]},
   { id: 'blog', label: 'Blog (cabeçalho)', desc: 'Os artigos aparecem automaticamente abaixo.', fields: [
     { k: 'blog.eyebrow', label: 'Etiqueta', type: 'text', max: 40 },

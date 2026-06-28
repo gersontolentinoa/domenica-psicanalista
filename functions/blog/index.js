@@ -45,6 +45,7 @@ export async function onRequestGet(context) {
     canonical: new URL(request.url).origin + '/blog',
     body,
     content: meta,
+    hasBlog: articles.length > 0,
   });
   return new Response(html, {
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60' },

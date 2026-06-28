@@ -10,7 +10,7 @@ export async function onRequestGet(context) {
   const ct = assetRes.headers.get('content-type') || '';
   if (!assetRes.ok || !ct.includes('text/html')) return assetRes;
 
-  let content, articles;
+  let content, articles, testimonials;
   try {
     content = { ...DEFAULTS };
     const row = await env.DB.prepare("SELECT value FROM content WHERE key='landing'").first();
@@ -19,6 +19,10 @@ export async function onRequestGet(context) {
       "SELECT slug, title, excerpt, cover_image, category, published_at FROM articles WHERE status='published' ORDER BY published_at DESC LIMIT 3"
     ).all();
     articles = r.results || [];
+    const t = await env.DB.prepare(
+      "SELECT text, author FROM testimonials WHERE status='published' ORDER BY position ASC, id ASC"
+    ).all();
+    testimonials = t.results || [];
   } catch (e) {
     // Banco indisponível → serve o template como está (nunca quebra a home).
     return new Response(assetRes.body, {
@@ -27,5 +31,5 @@ export async function onRequestGet(context) {
     });
   }
 
-  return renderLanding(assetRes, content, articles);
+  return renderLanding(assetRes, content, articles, testimonials);
 }

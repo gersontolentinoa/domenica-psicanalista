@@ -22,9 +22,18 @@ function articlesHtml(articles) {
   </a>`).join('');
 }
 
-export function renderLanding(assetRes, content, articles) {
+function testimonialsHtml(items) {
+  return items.map((t) => `<figure class="dep-slide">
+    <p>${escapeHtml(t.text)}</p>
+    ${t.author ? `<cite>— ${escapeHtml(String(t.author).replace(/^[—–-]\s*/, ''))}</cite>` : ''}
+  </figure>`).join('');
+}
+
+export function renderLanding(assetRes, content, articles, testimonials) {
   const wa = waHref(content);
   const waP = waPlain(content);
+  const hasArticles = !!(articles && articles.length);
+  const hasTestimonials = !!(testimonials && testimonials.length);
   const set = (el, v) => { if (v != null && v !== '') el.setInnerContent(String(v), { html: false }); };
 
   const rw = new HTMLRewriter()
@@ -35,7 +44,13 @@ export function renderLanding(assetRes, content, articles) {
     .on('[data-k-count]', { element(el) { const v = content[el.getAttribute('data-k-count')]; if (v) el.setAttribute('data-count', String(v)); } })
     .on('[data-k-wa]', { element(el) { el.setAttribute('href', wa); } })
     .on('[data-k-wa-plain]', { element(el) { el.setAttribute('href', waP); } })
-    .on('[data-articles]', { element(el) { if (articles && articles.length) el.setInnerContent(articlesHtml(articles), { html: true }); } });
+    // Blog: oculta seção e link da nav quando não há artigos publicados
+    .on('[data-navlink="blog"]', { element(el) { if (!hasArticles) el.remove(); } })
+    .on('[data-section="blog"]', { element(el) { if (!hasArticles) el.remove(); } })
+    .on('[data-articles]', { element(el) { if (hasArticles) el.setInnerContent(articlesHtml(articles), { html: true }); } })
+    // Depoimentos: oculta seção quando não há nada publicado; senão injeta o carrossel
+    .on('[data-section="depoimentos"]', { element(el) { if (!hasTestimonials) el.remove(); } })
+    .on('[data-testimonials]', { element(el) { if (hasTestimonials) el.setInnerContent(testimonialsHtml(testimonials), { html: true }); } });
 
   const out = rw.transform(assetRes);
   return new Response(out.body, {

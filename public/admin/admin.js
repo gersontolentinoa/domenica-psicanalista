@@ -112,6 +112,7 @@ function viewLogin() {
 const SECTIONS = {
   conteudo: { label: 'Conteúdo da página', render: renderConteudo },
   blog: { label: 'Blog', render: renderBlog },
+  depoimentos: { label: 'Depoimentos', render: renderDepoimentos },
 };
 
 function viewDashboard(active = 'conteudo') {
@@ -376,6 +377,77 @@ async function viewArticleEditor(main, id) {
   main.querySelector('#save').addEventListener('click', () => save(status));
   pubBtn.addEventListener('click', () => save(status === 'published' ? 'draft' : 'published'));
   main.querySelector('#back').addEventListener('click', () => renderBlog(main));
+}
+
+// ── Depoimentos ────────────────────────────────────────────
+async function renderDepoimentos(main) {
+  let editing = null;
+  main.innerHTML = `
+    <div class="page-head"><div>
+      <h1>Depoimentos</h1>
+      <p>Aparecem como carrossel na página inicial. A seção fica oculta no site enquanto não houver nenhum publicado.</p>
+    </div></div>
+    <div class="card">
+      <div class="field"><label id="dformLabel">Novo depoimento</label><textarea id="dtext" rows="3" maxlength="400" placeholder="O que a pessoa disse…"></textarea><div class="counter" id="dcount"></div></div>
+      <div class="field"><label>Autor</label><input id="dauthor" maxlength="80" placeholder="ex: Paciente · atendimento online"/></div>
+      <label class="check"><input type="checkbox" id="dpub" checked/> Publicar no site</label>
+      <div class="sticky-actions" style="margin-top:14px"><button class="btn btn-pri" id="dsave">Adicionar</button><button class="btn btn-ghost" id="dcancel" style="display:none">Cancelar</button></div>
+    </div>
+    <div id="dmsg"></div>
+    <div id="dlist" class="art-list" style="margin-top:18px"><div class="placeholder">Carregando…</div></div>`;
+
+  const tx = main.querySelector('#dtext'), au = main.querySelector('#dauthor'), pub = main.querySelector('#dpub');
+  const cnt = main.querySelector('#dcount'), saveBtn = main.querySelector('#dsave'), cancelBtn = main.querySelector('#dcancel'), formLabel = main.querySelector('#dformLabel');
+  const updc = () => { cnt.textContent = `${tx.value.length}/400`; };
+  tx.addEventListener('input', updc); updc();
+
+  function resetForm() {
+    editing = null; tx.value = ''; au.value = ''; pub.checked = true; updc();
+    saveBtn.textContent = 'Adicionar'; cancelBtn.style.display = 'none'; formLabel.textContent = 'Novo depoimento';
+  }
+  cancelBtn.addEventListener('click', resetForm);
+
+  async function load() {
+    const list = main.querySelector('#dlist');
+    let data;
+    try { data = await api('/testimonials?all=1'); }
+    catch (e) { list.innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`; return; }
+    if (!data.testimonials.length) { list.innerHTML = `<div class="card placeholder">Nenhum depoimento ainda. Adicione o primeiro acima.</div>`; return; }
+    list.innerHTML = '';
+    data.testimonials.forEach((t) => {
+      const item = el(`<div class="art-item"><div class="info"><h4>${esc(t.text)}</h4><div class="sub">${t.status === 'published' ? '<span class="pill pill-pub">Publicado</span>' : '<span class="pill pill-draft">Rascunho</span>'}${t.author ? ' · ' + esc(t.author) : ''}</div></div><div class="acts"><button class="btn btn-ghost btn-sm tog">${t.status === 'published' ? 'Despublicar' : 'Publicar'}</button><button class="btn btn-ghost btn-sm ed">Editar</button><button class="btn btn-danger btn-sm del">Excluir</button></div></div>`);
+      item.querySelector('.tog').addEventListener('click', async () => {
+        try { await api('/testimonials/' + t.id, { method: 'PUT', body: { text: t.text, author: t.author, status: t.status === 'published' ? 'draft' : 'published', position: t.position } }); toast('Atualizado.'); load(); }
+        catch (e) { toast(e.message, true); }
+      });
+      item.querySelector('.ed').addEventListener('click', () => {
+        editing = t.id; tx.value = t.text; au.value = t.author || ''; pub.checked = t.status === 'published'; updc();
+        saveBtn.textContent = 'Salvar'; cancelBtn.style.display = ''; formLabel.textContent = 'Editar depoimento';
+        main.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      item.querySelector('.del').addEventListener('click', async () => {
+        if (!confirm('Excluir este depoimento?')) return;
+        try { await api('/testimonials/' + t.id, { method: 'DELETE' }); toast('Excluído.'); if (editing === t.id) resetForm(); load(); }
+        catch (e) { toast(e.message, true); }
+      });
+      list.appendChild(item);
+    });
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    const body = { text: tx.value, author: au.value, status: pub.checked ? 'published' : 'draft' };
+    saveBtn.disabled = true;
+    main.querySelector('#dmsg').innerHTML = '';
+    try {
+      if (editing) await api('/testimonials/' + editing, { method: 'PUT', body });
+      else await api('/testimonials', { method: 'POST', body });
+      toast(editing ? 'Depoimento salvo.' : 'Depoimento adicionado.');
+      resetForm(); load();
+    } catch (e) { main.querySelector('#dmsg').innerHTML = `<div class="msg msg-err">${esc(e.message)}</div>`; toast(e.message, true); }
+    saveBtn.disabled = false;
+  });
+
+  load();
 }
 
 // ── Helpers de imagem e toast ──────────────────────────────
